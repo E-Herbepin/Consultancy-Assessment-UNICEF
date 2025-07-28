@@ -9,14 +9,15 @@ source("user_profile.R")
 if (!dir.exists(processed_data_dir)) {
   dir.create(processed_data_dir, recursive = TRUE)
   dir.create(docs_dir, recursive = TRUE)
+  dir.create(docs_dir, recursive = TRUE)
   source(here(scripts_dir, "data_preparation.R"))
   cat("Data prepared.\n")
 }
 
 # Step 2: Render final report
 rmarkdown::render(
-  input = file.path(scripts_dir, "report.Rmd"),
+  input = here(scripts_dir, "report.Rmd"),
   output_format = "html_document",
-  output_file = file.path(docs_dir, "final_report.pdf")
+  output_file = here(docs_dir, "final_report.html")
 )
 cat("Report rendered successfully.\n")
