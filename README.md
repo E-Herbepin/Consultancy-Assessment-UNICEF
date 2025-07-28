@@ -1,4 +1,5 @@
-# 📊 Reproducible Analysis Project
+# 📊 Test for Consultancy with the D&A Education Team
+Application for the position of Learning and Skills Data Analyst Consultant
 
 This repository is structured to support a fully **reproducible data analysis workflow**, from raw data to final report output.
 
@@ -47,20 +48,4 @@ To execute the full workflow, simply run:
 ```r
 source("run_project.R")
 ```
-
-## 🔁 Reproducibility Instructions
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/yourproject.git
-   ```
-
-2. Open R or RStudio and run:
-   ```r
-   source("user_profile.R")
-   source("run_project.R")
-   ```
-
-3. The output report will be saved in the `04_documentation/` folder.
-
 ---
