@@ -4,20 +4,8 @@
 
 # This script prepares the data for analysis
 
-# ------------------------ #
-#   1. Load Libraries ----
-# ------------------------ #
-
-library(readxl)
-library(here)
-library(dplyr)
-library(tidyr)
-library(purrr)
-library(janitor)
-library(readr)
-
 # --------------------------- #
-#   2. Load Status Table ----
+#   1. Load Status Table ----
 # --------------------------- #
 
 # Load country status data (on-track / off-track)
@@ -26,17 +14,25 @@ df_status <- read_xlsx(
   col_names = TRUE,
   col_types = c("text", "text", "text")
 ) |> 
-  clean_names()
-# Ensure the status table has correct column names (no spaces, special characters or capital letters)
+  clean_names() |> 
+  # Ensure the status table has correct column names (no spaces, special characters or capital letters)
+  mutate(
+    group = case_when(
+      status_u5mr %in% c("On Track", "Achieved") ~ "on_track",
+      status_u5mr == "Acceleration Needed" ~ "off_track"
+    )
+  )
 
 # ---------------------------------------------------- #
-#   3. Load and Clean Demographic Indicators Data ----
+#   2. Load and Clean Demographic Indicators Data ----
 # ---------------------------------------------------- #
 
 # Read demographic indicators (skip metadata rows)
 df_demo_pre <- read_xlsx(
   path = here("01_rawdata", "WPP2022_GEN_F01_DEMOGRAPHIC_INDICATORS_COMPACT_REV1.xlsx"),
+  sheet = "Projections",
   col_names = FALSE,
+  .name_repair = "minimal",
   skip = 15
 )
 
@@ -66,10 +62,11 @@ colnames(df_demo_pre) <- ifelse(
 
 # Remove header rows (1 and 2) to keep only data
 df_demo <- df_demo_pre |> 
-  slice(-c(1:2))
+  slice(-c(1:2)) |> 
+  filter(year == "2022")
 
 # ------------------------------------------- #
-#   4. Load Global Indicator Raw Dataset ----
+#   3. Load Global Indicator Raw Dataset ----
 # ------------------------------------------- #
 
 # Read the indicators dataset (with CODE:label structure)
@@ -77,10 +74,14 @@ df_indicators_raw <- read.csv(
   here("01_rawdata", "fusion_GLOBAL_DATAFLOW_UNICEF_1.0_all.csv"),
   check.names = FALSE
 ) |> 
-  select(-1)  # Remove unnecessary first column
+  # Remove unnecessary first column
+  select(-1)  |> 
+  group_by(`INDICATOR:Indicator`,`REF_AREA:Geographic area`) |>
+  # Keep only the most recent time period for each area
+  filter(`TIME_PERIOD:Time period` == max(`TIME_PERIOD:Time period`))
 
 # -------------------------------------------------- #
-##   4.1 Separate CODE and Label in All Columns ----
+##   3.1 Separate CODE and Label in All Columns ----
 # -------------------------------------------------- #
 
 # Function to split values into separate components
@@ -103,7 +104,9 @@ original_names <- names(df_indicators_raw)
 
 # Create correspondence tables (code : label) for each variable
 ls_tb_corres <- imap(separated, function(tbl, var) {
-  tbl |> distinct()
+  tbl |> distinct()|> 
+    mutate(label = label |> 
+             make_clean_names())
 }) |> 
   # We add a correspondence table for column names.
   append(list(names = tibble(
@@ -115,13 +118,44 @@ ls_tb_corres <- imap(separated, function(tbl, var) {
 # Rename columns of the cleaned indicator dataset using extracted codes
 colnames(df_indicators) <- ls_tb_corres$names$code
 
+
+# -------------------------- #
+##   3.2 Merge database ----
+# -------------------------- #
+
+# Merge demographic indicators with status and indicators datasets
+df_total <- df_indicators |> 
+  left_join(
+    df_status,
+    by = join_by(REF_AREA == iso3code)
+  ) |> 
+left_join(
+  df_demo,
+  by = join_by(
+    REF_AREA == iso3_alpha_code
+  )
+) |>
+  # Filter out rows with missing status
+  filter(!is.na(status_u5mr)) |> 
+  select(
+    REF_AREA,
+    INDICATOR,
+    status_u5mr,
+    group,
+    TIME_PERIOD,
+    OBS_VALUE,
+    fertility_births_thousands,
+  ) |> 
+mutate(
+  fertility_births_thousands = as.numeric(fertility_births_thousands),
+  OBS_VALUE = as.numeric(OBS_VALUE)
+)
+
 # ----------------------------------- #
-#   6. Save Cleaned Data Outputs ----
+#   4. Save Cleaned Data Outputs ----
 # ----------------------------------- #
 
-write.csv(df_indicators, here("02_data", "interest_indicators.csv"), row.names = FALSE)
-write_csv(df_demo, here("02_data", "demographic_indicators.csv"))
-write_csv(df_status, here("02_data", "status.csv"))
+write.csv(df_total, here("02_data", "interest_indicators.csv"), row.names = FALSE)
 
 # Save correspondence tables (for later lookup of CODE -> Label)
 save(
