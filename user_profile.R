@@ -2,7 +2,7 @@
 # This script sets up the environment for reproducibility
 
 # Load required packages (install if necessary)
-required_packages <- c("readxl", "here", "dplyr", "tidyr", "purrr", "janitor", "readr")
+required_packages <- c("readxl", "here", "dplyr", "tidyr", "purrr", "janitor", "readr", "ggplot2")
 
 for (pkg in required_packages) {
   if (!require(pkg, character.only = TRUE)) {
