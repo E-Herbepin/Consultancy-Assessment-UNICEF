@@ -8,8 +8,6 @@ source("user_profile.R")
 # Check if the script for data preparation already ran, if not, run it, else load the processed data.
 if (!dir.exists(processed_data_dir)) {
   dir.create(processed_data_dir, recursive = TRUE)
-  dir.create(docs_dir, recursive = TRUE)
-  dir.create(docs_dir, recursive = TRUE)
   source(here(scripts_dir, "data_preparation.R"))
   cat("Data prepared.\n")
 }
