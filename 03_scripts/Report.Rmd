@@ -1,0 +1,44 @@
+---
+title: "Test for Consultancy with the D&A Education Team"
+subtitle : "Application for the position of Learning and Skills Data Analyst Consultant"
+date: "2025-07-28"
+output: html_document
+---
+
+The average proportion of births in 2022 that are expected to have benefited from at least four prenatal visits is 17.5 percentage points higher in countries that are “on track” than in those that are “off track”. Similarly, the average proportion of births expected in 2022 that should be attended by health professionals is 23.8 percentage points higher in countries “on track” than in those “off track.”
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df_total <- readr::read_csv(here::here("02_data", "interest_indicators.csv"))
+df_total |> 
+  # For each indicator and each group (on track and off track)
+  dplyr::group_by(INDICATOR,group) |>
+  dplyr::summarise(
+    # We calculate population-weighted average
+    average = sum(fertility_births_thousands * OBS_VALUE, na.rm= TRUE)/sum(fertility_births_thousands, na.rm=TRUE),
+    .groups = "drop"
+  ) |> 
+  dplyr::mutate(
+    # We rename labels
+    group = factor(group, levels = c("on_track", "off_track"), 
+                   labels = c("On Track", "Off Track")),
+    INDICATOR = factor(INDICATOR, 
+                       levels = c("MNCH_ANC4", "MNCH_SAB"),
+                       labels = c("At least 4 antenatal\ncare visits", "Deliveries attended\nby skilled health personnel"))
+  ) |>
+ggplot2::ggplot(ggplot2::aes(x = INDICATOR, y = average, fill = group)) +
+  ggplot2::geom_bar(stat = "identity", position = "dodge") +
+  ggplot2::geom_text(ggplot2::aes(label = paste0(round(average, 1), "%")), 
+            position = ggplot2::position_dodge(width = 0.9), vjust = 1.5) +
+  ggplot2::labs(title = "Births health services",
+       x = "",
+       y = "Proportion (%)",
+       fill = ""
+       ) +
+  ggplot2::theme_minimal()
+``` 
+
+
+These indicators assume continuity of health services in 2022 compared to the last available year and therefore, in some cases, compared to 2018. The COVID-19 pandemic and the multiple tensions it has caused in the health sector should make us rethink this assumption. 
+
+There is a lack of data, particularly for countries off track, on the proportion of deliveries attended by skilled health personnel (44 lines out of 105 in the on track group). It can be assumed that this data is missing mainly due to the absence or poor structuring of health services.
